@@ -2,6 +2,7 @@
     background-repeat: no-repeat;
     @include sprite();
 }
+
 .ico-after,
 .custom-block-body {
     position: relative;
@@ -178,18 +179,6 @@
         }
     }
 
-    &.foursquare {
-        &:after {
-            @include sprite-position($foursquare);
-        }
-        &.blue:after {
-            @include sprite-position($foursquare-blue);
-        }
-        &.light:after {
-            @include sprite-position($foursquare-light);
-        }
-    }
-
     &.gear {
         &:after {
             @include sprite-position($gear);
@@ -211,18 +200,6 @@
         }
         &.light:after {
             @include sprite-position($github-light);
-        }
-    }
-
-    &.google-plus {
-        &:after {
-            @include sprite-position($google-plus);
-        }
-        &.blue:after {
-            @include sprite-position($google-plus-blue);
-        }
-        &.light:after {
-            @include sprite-position($google-plus-light);
         }
     }
 
@@ -465,4 +442,11 @@ h6 {
         width: 16px;
         height: 16px;
     }
+}
+
+// As icons are not in the size grid, they are off-aligned for titles
+// because of the close line under them. This is not a problem for other
+// elements due to different layout.
+h2.ico-after:after {
+    top: -$length-2;
 }

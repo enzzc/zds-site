@@ -74,7 +74,7 @@
         data-ajax-output="solve-topic"
     >
         {% if topic.solved_by == topic.author %}
-            {% trans "L’auteur de ce sujet a trouvé une solution à son problème." %}
+            {% trans "Le problème exposé dans ce sujet a été résolu." %}
         {% else %}
             {% url "member-detail" topic.solved_by.username as url_member_detail %}
             {% blocktrans with username=topic.solved_by.username %}
@@ -107,10 +107,6 @@
 
         {% captureas helpful_link %}
             {% url 'post-useful' %}?message={{ message.pk }}
-        {% endcaptureas %}
-
-        {% captureas potential_spam_link %}
-            {% url 'post-potential-spam' %}?message={{ message.pk }}
         {% endcaptureas %}
 
         {% captureas karma_link %}

@@ -13,14 +13,23 @@ from django.db.models.signals import post_save, m2m_changed, pre_delete
 from django.dispatch import receiver
 
 from zds.forum.models import Topic, Post, Forum
+import zds.forum.signals as forum_signals
 from zds.mp.models import PrivateTopic, PrivatePost
 import zds.mp.signals as mp_signals
-from zds.notification.models import TopicAnswerSubscription, ContentReactionAnswerSubscription, \
-    PrivateTopicAnswerSubscription, Subscription, Notification, NewTopicSubscription, NewPublicationSubscription, \
-    PingSubscription
+from zds.notification.models import (
+    TopicAnswerSubscription,
+    ContentReactionAnswerSubscription,
+    PrivateTopicAnswerSubscription,
+    Subscription,
+    Notification,
+    NewTopicSubscription,
+    NewPublicationSubscription,
+    PingSubscription,
+)
 import zds.notification.signals as notification_signals
 from zds.tutorialv2.models.database import PublishableContent, ContentReaction
 import zds.tutorialv2.signals as tuto_signals
+import zds.utils.signals as utils_signals
 from zds.utils.models import Tag
 
 logger = logging.getLogger(__name__)
@@ -28,12 +37,16 @@ logger = logging.getLogger(__name__)
 
 @receiver(m2m_changed, sender=User.groups.through)
 def remove_group_subscription_on_quitting_groups(*, sender, instance, action, pk_set, **__):
-    if action not in ('pre_clear', 'pre_remove'):  # only on updating
+    if action not in ("pre_clear", "pre_remove"):  # only on updating
         return
-    if action == 'pre_clear':
+    if action == "pre_clear":
 
-        remove_group_subscription_on_quitting_groups(sender=sender, instance=instance, action='pre_remove',
-                                                     pk_set=set(instance.groups.values_list('pk', flat=True)))
+        remove_group_subscription_on_quitting_groups(
+            sender=sender,
+            instance=instance,
+            action="pre_remove",
+            pk_set=set(instance.groups.values_list("pk", flat=True)),
+        )
         return
 
     for forum in Forum.objects.filter(groups__pk__in=list(pk_set)):
@@ -62,29 +75,30 @@ def disable_for_loaddata(signal_handler):
     Avoid the signal to be treated when sent by fixtures
     See https://code.djangoproject.com/ticket/8399#comment:7
     """
+
     @wraps(signal_handler)
     def wrapper(*args, **kwargs):
         for fr in inspect.stack():
-            if inspect.getmodulename(fr[1]) == 'loaddata':
+            if inspect.getmodulename(fr[1]) == "loaddata":
                 return
         signal_handler(*args, **kwargs)
+
     return wrapper
 
 
-@receiver(notification_signals.answer_unread, sender=Topic)
-def unread_topic_event(sender, *, user, instance, **__):
+@receiver(forum_signals.post_unread, sender=Post)
+def unread_topic_event(sender, *, user, post, **__):
     """
-    Sends a notification to the user, without sending an email
-
-    :param instance: the answer being marked as unread
-    :param user: user marking the answer as unread
-
+    Send a notification to the user, without sending an email.
+    :param post: the post being marked as unread
+    :param user: the user marking the post as unread
     """
-    subscription = TopicAnswerSubscription.objects.get_existing(user, instance.topic, is_active=True)
+    subscription = TopicAnswerSubscription.objects.get_existing(user, post.topic, is_active=True)
     if subscription:
-        subscription.send_notification(content=instance, sender=instance.author, send_email=False)
+        subscription.send_notification(content=post, sender=post.author, send_email=False)
 
 
+@receiver(forum_signals.topic_read, sender=Topic)
 @receiver(notification_signals.content_read, sender=Topic)
 def mark_topic_notifications_read(sender, *, instance, user, **__):
     """
@@ -111,15 +125,18 @@ def mark_topic_notifications_read(sender, *, instance, user, **__):
             subscription.mark_notification_read(content=instance)
 
     content_type = ContentType.objects.get_for_model(instance)
-    notifications = list(Notification.objects.filter(subscription__user=user, object_id=instance.pk,
-                                                     content_type__pk=content_type.pk, is_read=False))
+    notifications = list(
+        Notification.objects.filter(
+            subscription__user=user, object_id=instance.pk, content_type__pk=content_type.pk, is_read=False
+        )
+    )
 
     for notification in notifications:
         notification.is_read = True
-        notification.save(update_fields=['is_read'])
+        notification.save(update_fields=["is_read"])
 
 
-@receiver(notification_signals.content_read, sender=PublishableContent)
+@receiver(tuto_signals.content_read, sender=PublishableContent)
 @receiver(tuto_signals.content_unpublished)
 def mark_content_reactions_read(sender, *, instance, user=None, target, **__):
     """
@@ -193,7 +210,8 @@ def notify_participants(sender, *, topic, **__):
         subscription.send_notification(
             content=topic.last_message,
             sender=topic.last_message.author,
-            send_email=participant.profile.email_for_answer)
+            send_email=participant.profile.email_for_answer,
+        )
 
 
 @receiver(mp_signals.participant_removed, sender=PrivateTopic)
@@ -208,8 +226,8 @@ def clean_subscriptions(sender, *, topic, **__):
             subscription.deactivate()
 
 
-@receiver(notification_signals.content_read, sender=ContentReaction)
-@receiver(notification_signals.content_read, sender=Post)
+@receiver(tuto_signals.content_read, sender=ContentReaction)
+@receiver(forum_signals.post_read, sender=Post)
 def mark_comment_read(sender, *, instance, user, **__):
     comment = instance
 
@@ -218,34 +236,28 @@ def mark_comment_read(sender, *, instance, user, **__):
         subscription.mark_notification_read(comment)
 
 
-@receiver(notification_signals.edit_content, sender=Topic)
-def edit_topic_event(sender, *, action, instance, **kwargs):
-    """
-    :param kwargs: contains
-        - instance: the topic edited.
-        - action: action of the edit.
-    """
-    topic = instance
+@receiver(forum_signals.topic_moved, sender=Topic)
+def moved_topic_event(sender, *, topic, **kwargs):
+    topic_content_type = ContentType.objects.get_for_model(topic)
+    _handle_private_forum_moving(topic, topic_content_type, ContentType.objects.get_for_model(topic.last_message))
+
+
+@receiver(forum_signals.topic_edited, sender=Topic)
+def edit_topic_event(sender, *, topic, **kwargs):
     topic_content_type = ContentType.objects.get_for_model(topic)
 
-    if action == 'move':
+    # Update notification as dead if it was triggered by a deleted tag
+    tag_content_type = _handle_deleted_tags(topic, topic_content_type)
 
-        _handle_private_forum_moving(topic, topic_content_type, ContentType.objects.get_for_model(topic.last_message))
-
-    elif action == 'edit_tags_and_title':
-        topic = instance
-
-        # Update notification as dead if it was triggered by a deleted tag
-        tag_content_type = _handle_deleted_tags(topic, topic_content_type)
-
-        # Add notification of new topic for the subscription on the new tags
-        _handle_added_tags(tag_content_type, topic)
+    # Add notification of new topic for the subscription on the new tags
+    _handle_added_tags(tag_content_type, topic)
 
 
 def _handle_added_tags(tag_content_type, topic):
     for tag in topic.tags.all():
         subscriptions = NewTopicSubscription.objects.filter(
-            object_id=tag.id, content_type__pk=tag_content_type.pk, is_active=True)
+            object_id=tag.id, content_type__pk=tag_content_type.pk, is_active=True
+        )
         for subscription in subscriptions:
             notification = Notification.objects.filter(object_id=topic.id, subscription=subscription)
             if not notification:
@@ -255,8 +267,9 @@ def _handle_added_tags(tag_content_type, topic):
 
 def _handle_deleted_tags(topic, topic_content_type):
     tag_content_type = ContentType.objects.get_for_model(Tag)
-    notifications = Notification.objects \
-        .filter(object_id=topic.pk, content_type__pk=topic_content_type.pk, is_read=False).all()
+    notifications = Notification.objects.filter(
+        object_id=topic.pk, content_type__pk=topic_content_type.pk, is_read=False
+    ).all()
     for notification in notifications:
         is_still_valid = notification.subscription.content_type != tag_content_type
         if not is_still_valid:
@@ -265,8 +278,9 @@ def _handle_deleted_tags(topic, topic_content_type):
                     is_still_valid = True
                     break
         if not is_still_valid:
-            subscription = NewTopicSubscription.objects \
-                .get_existing(notification.subscription.user, topic.forum, is_active=True)
+            subscription = NewTopicSubscription.objects.get_existing(
+                notification.subscription.user, topic.forum, is_active=True
+            )
             if subscription:
                 notification.subscription = subscription
             else:
@@ -283,8 +297,9 @@ def _handle_private_forum_moving(topic, topic_content_type, post_content_type):
     PingSubscription.mark_inaccessible_ping_as_read_for_topic(topic)
     # If the topic is moved to a forum followed by the user, we update the subscription of the notification.
     # Otherwise, we update the notification as dead.
-    notifications = list(Notification.objects
-                         .filter(object_id=topic.pk, content_type__pk=topic_content_type.pk, is_read=False).all())
+    notifications = list(
+        Notification.objects.filter(object_id=topic.pk, content_type__pk=topic_content_type.pk, is_read=False).all()
+    )
     for notification in notifications:
         subscription = notification.subscription
         if subscription.is_active:
@@ -292,7 +307,7 @@ def _handle_private_forum_moving(topic, topic_content_type, post_content_type):
             notification.save()
         elif notification.subscription.content_object != notification.content_object.forum:
             notification.is_dead = True
-            notification.save(update_fields=['is_dead', 'is_read'])
+            notification.save(update_fields=["is_dead", "is_read"])
 
 
 @receiver(post_save, sender=Topic)
@@ -360,7 +375,7 @@ def answer_content_reaction_event(sender, *, instance, created=True, **__):
         ContentReactionAnswerSubscription.objects.get_or_create_active(author, publishable_content)
 
 
-@receiver(notification_signals.new_content, sender=PublishableContent)
+@receiver(tuto_signals.content_published, sender=PublishableContent)
 @disable_for_loaddata
 def content_published_event(*__, instance, by_email, **___):
     """
@@ -385,21 +400,6 @@ def content_published_event(*__, instance, by_email, **___):
             # while they are also among the authors.
             by_email = subscription.by_email and subscription.user.profile.email_for_answer
             subscription.send_notification(content=content, sender=user, send_email=by_email)
-
-
-@receiver(notification_signals.new_content, sender=ContentReaction)
-@receiver(notification_signals.new_content, sender=Post)
-@disable_for_loaddata
-def answer_comment_event(sender, *, instance, user, **__):
-    comment = instance
-    user = user
-
-    assert comment is not None
-    assert user is not None
-    if sender == Post and not instance.topic.forum.can_read(user):
-        return
-    subscription = PingSubscription.objects.get_or_create_active(user, comment)
-    subscription.send_notification(content=comment, sender=comment.author, send_email=False)
 
 
 @receiver(mp_signals.message_added, sender=PrivatePost)
@@ -434,8 +434,9 @@ def answer_private_topic_event(sender, *, instance, by_email, no_notification_fo
     for subscription in subscription_list:
         if subscription.user != post.author:
             is_new_mp = post.position_in_topic == 1
-            send_email = by_email and (subscription.user.profile.email_for_answer or (is_new_mp and subscription.user
-                                                                                      .profile.email_for_new_mp))
+            send_email = by_email and (
+                subscription.user.profile.email_for_answer or (is_new_mp and subscription.user.profile.email_for_new_mp)
+            )
             subscription.send_notification(content=post, sender=post.author, send_email=send_email)
 
 
@@ -470,25 +471,41 @@ def cleanup_notification_for_unpublished_content(sender, instance, **__):
     :param sender: always PublishableContent
     :param instance: the unpublished content
     """
-    logger.debug('deal with %s(%s) notifications.', sender, instance)
+    logger.debug("deal with %s(%s) notifications.", sender, instance)
     try:
-        notifications = Notification.objects\
-            .filter(content_type=ContentType.objects.get_for_model(instance, True),
-                    object_id=instance.pk)
+        notifications = Notification.objects.filter(
+            content_type=ContentType.objects.get_for_model(instance, True), object_id=instance.pk
+        )
         for notification in notifications:
             subscription = notification.subscription
             if subscription.last_notification and subscription.last_notification.pk == notification.pk:
                 notification.subscription.last_notification = None
                 notification.subscription.save()
             notification.delete()
-        Subscription.objects.filter(content_type=ContentType.objects.get_for_model(instance, True),
-                                    object_id=instance.pk).update(is_active=False)
-        logger.debug('Nothing went wrong.')
+        Subscription.objects.filter(
+            content_type=ContentType.objects.get_for_model(instance, True), object_id=instance.pk
+        ).update(is_active=False)
+        logger.debug("Nothing went wrong.")
     except DatabaseError as e:
-        logger.exception('Error while saving %s, %s', instance, e)
+        logger.exception("Error while saving %s, %s", instance, e)
 
 
-@receiver(notification_signals.unsubscribe)
-def unsubscripte_unpinged_user(sender, instance, user, **_):
+@receiver(utils_signals.ping, sender=ContentReaction)
+@receiver(utils_signals.ping, sender=Post)
+@disable_for_loaddata
+def ping_event(sender, *, instance, user, **__):
+    comment = instance
+    user = user
+
+    assert comment is not None
+    assert user is not None
+    if sender == Post and not instance.topic.forum.can_read(user):
+        return
+    subscription = PingSubscription.objects.get_or_create_active(user, comment)
+    subscription.send_notification(content=comment, sender=comment.author, send_email=False)
+
+
+@receiver(utils_signals.unping)
+def unping_event(sender, instance, user, **_):
     if user:
         PingSubscription.objects.deactivate_subscriptions(user, instance)

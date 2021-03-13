@@ -6,7 +6,7 @@ from zds.tutorialv2.models.database import FakeChapter
 
 
 class Command(BaseCommand):
-    help = 'Index data in ES and manage them'
+    help = "Index data in ES and manage them"
 
     index_manager = None
     models = get_django_indexable_objects()
@@ -16,30 +16,31 @@ class Command(BaseCommand):
         Also, its mapping needs to be defined before the one of PublishedContent for parenting reasons (!!!).
         """
 
-        super(Command, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.models.insert(0, FakeChapter)
 
         self.index_manager = ESIndexManager(**settings.ES_SEARCH_INDEX)
 
         if not self.index_manager.connected_to_es:
-            raise Exception('Unable to connect to Elasticsearch, aborting.')
+            raise Exception("Unable to connect to Elasticsearch, aborting.")
 
     def add_arguments(self, parser):
         parser.add_argument(
-            'action', type=str, help='action to perform', choices=['setup', 'clear', 'index_all', 'index_flagged'])
+            "action", type=str, help="action to perform", choices=["setup", "clear", "index_all", "index_flagged"]
+        )
 
     def handle(self, *args, **options):
 
-        if options['action'] == 'setup':
+        if options["action"] == "setup":
             self.setup_es()
-        elif options['action'] == 'clear':
+        elif options["action"] == "clear":
             self.clear_es()
-        elif options['action'] == 'index_all':
+        elif options["action"] == "index_all":
             self.index_documents(force_reindexing=True)
-        elif options['action'] == 'index_flagged':
+        elif options["action"] == "index_flagged":
             self.index_documents(force_reindexing=False)
         else:
-            raise CommandError('unknown action {}'.format(options['action']))
+            raise CommandError("unknown action {}".format(options["action"]))
 
     def setup_es(self):
 
@@ -64,10 +65,10 @@ class Command(BaseCommand):
                 continue
 
             if force_reindexing:
-                print(('- indexing {}s'.format(model.get_es_document_type())))
+                print(f"- indexing {model.get_es_document_type()}s")
 
             indexed_counter = self.index_manager.es_bulk_indexing_of_model(model, force_reindexing=force_reindexing)
             if force_reindexing:
-                print(('  {}\titems indexed'.format(indexed_counter)))
+                print(f"  {indexed_counter}\titems indexed")
 
         self.index_manager.refresh_index()

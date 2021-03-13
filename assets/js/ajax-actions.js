@@ -314,9 +314,9 @@
 
     // scroll to the textarea
     if (localStorage.getItem('editor_choice') === 'new') {
-      $('html, body').animate({ scrollTop: $(editor).siblings('.CodeMirror').offset().top }, 500)
+      $('html, body').animate({ scrollTop: $(editor).siblings('.CodeMirror').top }, 500)
     } else {
-      $('html, body').animate({ scrollTop: $(editor).offset().top }, 500)
+      $('html, body').animate({ scrollTop: $(editor).top }, 500)
       editor.focus()
     }
   })
@@ -325,11 +325,14 @@
      * Mark a message useful
      */
   $('.topic-message').on('click', "[data-ajax-input='mark-message-as-useful']", function(e) {
-    var $button = $(this)
-    var $form = $button.parents('form:first')
-    var $message = $form.parents('article')
-    var $usefulText = $message.find("[data-ajax-output='mark-message-as-useful']")
-    var csrfmiddlewaretoken = $form.find('input[name=csrfmiddlewaretoken]').val()
+    const $button = $(this)
+    const $form = $button.parents('form:first')
+    const $message = $form.parents('article')
+    const $usefulText = $message.find("[data-ajax-output='mark-message-as-useful']")
+    const csrfmiddlewaretoken = $form.find('input[name=csrfmiddlewaretoken]').val()
+
+    const $desktopText = $button.find('.desktop')
+    const $mobileText = $button.find('.until-desktop')
 
     $.ajax({
       url: $form.attr('action'),
@@ -339,37 +342,22 @@
       },
       success: function() {
         $message.toggleClass('helpful')
-        $button.toggleText('content-on-click')
         $usefulText.toggleClass('hidden')
         $button.blur()
-      }
-    })
 
-    e.stopPropagation()
-    e.preventDefault()
-  })
+        // Toggle both mobile and desktop texts
+        if ($desktopText.length !== 0 && $mobileText.length !== 0) {
+          const currentDesktopText = $desktopText.text()
+          const currentMobileText = $mobileText.text()
 
-  /*
-     * Mark a message as potential spam
-     */
-  $('.topic-message').on('click', "[data-ajax-input='mark-message-as-potential-spam']", function(e) {
-    var $button = $(this)
-    var $form = $button.parents('form:first')
-    var $message = $form.parents('article')
-    var $usefulText = $message.find("[data-ajax-output='mark-message-as-potential-spam']")
-    var csrfmiddlewaretoken = $form.find('input[name=csrfmiddlewaretoken]').val()
+          $desktopText.text($button.data('content-on-click'))
+          $mobileText.text($button.data('content-on-click-mobile'))
 
-    $.ajax({
-      url: $form.attr('action'),
-      type: 'POST',
-      data: {
-        csrfmiddlewaretoken: csrfmiddlewaretoken
-      },
-      success: function() {
-        $message.toggleClass('potential-spam')
-        $button.toggleText('content-on-click')
-        $usefulText.toggleClass('hidden')
-        $button.blur()
+          $button.data('content-on-click', currentDesktopText)
+          $button.data('content-on-click-mobile', currentMobileText)
+        } else {
+          $button.toggleText('content-on-click')
+        }
       }
     })
 

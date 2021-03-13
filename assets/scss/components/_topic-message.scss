@@ -3,43 +3,52 @@ div.msg-are-hidden {
     z-index: 1;
     text-align: center;
     margin: 0;
+    margin-bottom: $length-14;
 
     a {
-        color: #999;
-        font-size: 12px;
+        color: $grey-400;
+        font-size: $font-size-11;
     }
 
     & ~ .topic-message.hidden + .topic-message:not(.hidden) {
-        margin-top: 10px;
+        margin-top: $length-10;
+    }
 
-        @include until-desktop {
-            margin-top: 0;
-            padding-top: 5px;
-        }
-    }
     & + .topic-message.hidden + .pagination {
-        margin-top: 10px;
+        margin-top: $length-10;
     }
+
+    + .topic-message {
+        margin-top: 0;
+    }
+
     .topic-message + & {
-        margin-top: -15px;
+        margin-top: -$length-16;
     }
 }
 
 .topic-message {
     position: relative;
 
+    margin: $length-24 0;
+
+    &:first-child {
+        margin-top: $length-32;
+    }
+
     &.repeated {
         .message {
             &,
             .is-author {
-                background: #EEE;
+                background: $grey-000;
             }
 
             &:after {
-                border-right-color: #EEE;
+                border-right-color: $grey-000;
             }
         }
     }
+
     &.helpful:not(.potential-spam) {
         .message {
             &,
@@ -55,15 +64,12 @@ div.msg-are-hidden {
             .message {
                 &,
                 .is-author {
-                    background: desaturate($color-helpful, 50%);
-                }
-
-                &:after {
-                    border-right-color: desaturate($color-helpful, 50%);
+                    background: rgba($color-helpful, .4);
                 }
             }
         }
     }
+
     &.potential-spam {
         .message {
             &,
@@ -79,11 +85,7 @@ div.msg-are-hidden {
             .message {
                 &,
                 .is-author {
-                    background: desaturate($color-potential-spam, 50%);
-                }
-
-                &:after {
-                    border-right-color: desaturate($color-potential-spam, 50%);
+                    background: rgba($color-potential-spam, .5);
                 }
             }
         }
@@ -93,73 +95,137 @@ div.msg-are-hidden {
         .message {
             &,
             .is-author {
-                background: #EEE;
+                background: $grey-100;
             }
             &:after {
-                border-right-color: #EEE;
+                border-right-color: $grey-100;
+            }
+
+            // Messages like “this reply was useful” are not displayed for hidden messages.
+            // This avoid a parasite margin.
+            .message-content aside {
+                display: none;
+            }
+
+            .message-bottom {
+               display: none;
             }
         }
+
         .user .avatar-link img {
             opacity: 0.8;
         }
+
         & + .pagination, & + .alert-box {
-            margin-top: 25px;
+            margin-top: $length-24;
+        }
+    }
+
+    @include desktop {
+        .user,
+        .message {
+            &:after {
+                content: " ";
+
+                position: absolute;
+                top: $length-10;
+
+                display: block;
+                width: 0;
+                height: 0;
+
+                border: $length-20 solid transparent;
+                border-left: 0;
+            }
         }
     }
 
     .user {
-        .avatar-link {
-            display: block;
-            height: 58px;
-            width: 58px;
-            z-index: 0;
+        @include until-desktop {
+            display: none;
+        }
+
+        margin-top: $length-6;
+
+        @include desktop {
             position: absolute;
             top: 0;
-            border: 1px solid #DDD;
+            left: 0;
+
+            padding-top: $length-48;
+
+            &:after {
+                top: $length-4;
+                left: $length-48;
+
+                border-right-color: $grey-200;
+            }
+        }
+
+        .avatar-link {
+            position: absolute;
+            top: 0;
+
+            display: block;
+
+            width: $length-48;
+            height: $length-48;
+
+            border: $length-1 solid $white;
+
+            z-index: 0;
 
             &[href]:hover,
             &[href]:focus {
-                border-color: #FFF;
+                border-color: $true-white;
+                box-shadow: rgba($black, .3) 0 $length-1 $length-8;
+
                 overflow: hidden;
-                box-shadow: rgba(0, 0, 0, .3) 0 1px 7px;
             }
 
             img {
-                height: 58px;
-                width: 58px;
+                height: $length-48;
+                width: $length-48;
+
+                box-shadow: inset 0 0 $length-1 rgba($black, .1);
             }
         }
+
         .user-metadata {
-            width: 60px;
-            height: 25px;
+            width: $length-48;
+            height: $length-24;
 
             a {
                 display: block;
-                float: left;
-                border: 1px solid #D2D5D6;
+
+                width: 100%;
+                height: 100%;
+
+                border: $length-1 solid $grey-200;
                 border-top: 0;
-                text-align: center;
-                background-color: #edefef;
+
+                background-color: $grey-000;
+
+                color: $grey-500;
                 text-decoration: none;
-                color: #424242;
-                height: 25px;
-                line-height: 26px;
-                width: 58px;
-                color: #777;
+                text-align: center;
+                line-height: 1.6;
+
                 transition: border $transition-duration ease, background $transition-duration ease;
 
                 &:hover,
                 &:focus {
-                    border-bottom-width: 1px;
-                    border-bottom-color: #777;
-                    background: #FFF;
+                    border-bottom-width: $length-1;
+                    border-bottom-color: $primary-600;
+
+                    background: $true-white;
                 }
 
                 &.positive {
-                    color: #48a200;
+                    color: $green-700;
                 }
                 &.negative {
-                    color: #c0392b;
+                    color: $red-700;
                     font-weight: bold;
                 }
             }
@@ -168,206 +234,514 @@ div.msg-are-hidden {
 
     .message {
         position: relative;
-        background-color: #FDFDFD;
-        border: 1px solid #D2D5D6;
-        border-right-width: 2px;
-        border-bottom-width: 3px;
-        min-height: 75px;
 
-        .is-author {
-            position: absolute;
-            top: -16px;
-            left: 10px;
-            background: #FDFDFD;
-            padding: 0 5px;
-            font-size: 12px;
-            line-height: 20px;
-            color: #999;
-            border-top: 1px solid #D2D5D6;
+        min-height: $length-64;
 
-            &:before,
+        border: 1px solid $grey-200;
+        border-right-width: $length-2;
+        border-bottom-width: $length-4;
+
+        background-color: $true-white;
+
+        @include desktop {
+            // Avatar' size + arrow' size
+            margin-left: $length-48 + $length-20;
+
             &:after {
-                content: " ";
-                display: block;
-                position: absolute;
-                top: 0;
-                height: 15px;
-                width: 1px;
-                background: #D2D5D6;
-            }
-            &:before {
-                left: 0;
-            }
-            &:after {
-                right: 0;
+                // Arrow alignment, must be exact
+                top: 9px;
+                left: -19px;
+
+                border-right-color: $true-white;
             }
         }
 
-        .message-metadata {
-            display: inline-block;
-            font-size: 14px;
-            font-size: 1.4rem;
-            margin-left: 5px;
+        header {
+            display: flex;
+            align-items: flex-start;
 
-            a {
-                display: block;
-                float: left;
-                color: #999;
-                text-decoration: none;
-                height: 30px;
-                line-height: 30px;
-                padding: 0 5px;
-                border-bottom: 1px solid #D2D5D6;
-                transition-property: color, outline, border;
-                transition-timing-function: ease;
-                transition-duration: $transition-duration;
+            ul.message-metadata {
+                flex: 2;
 
-                &:hover,
-                &:focus {
-                    border-bottom: 1px solid lighten($color-primary, 15%);
-                    color: lighten($color-primary, 15%);
-                    outline: none;
+                @include horizontal-list;
+
+                margin: $length-6 $length-10 $length-10;
+                padding: 0;
+
+                li {
+                    &, a {
+                        color: $grey-500;
+                        font-size: $font-size-10;
+                    }
+
+                    .username-date-separator {
+                        @include mobile {
+                            display: none;
+                        }
+                    }
+
+                    a {
+                        text-decoration: none;
+
+                        &:hover, &:focus {
+                            text-decoration: underline;
+                        }
+
+                        &.username {
+                            color: $grey-900;
+                            font-weight: bold;
+                        }
+
+                        &.date {
+                            @include until-wide {
+                                .short-date {
+                                    display: inline;
+                                }
+                                .long-date {
+                                    display: none;
+                                }
+                            }
+                            @include wide {
+                                .short-date {
+                                    display: none;
+                                }
+                                .long-date {
+                                    display: inline;
+                                }
+                            }
+
+                            @include mobile {
+                                display: none;
+                            }
+                        }
+                    }
+
+                    &.message-edited {
+                        @include mobile {
+                            display: none;
+                        }
+                    }
+
+                    &.is-author {
+                        display: inline-flex;
+                        align-items: center;
+
+                        svg {
+                            position: relative;
+                            top: $length-1;
+
+                            height: $length-14;
+                        }
+                    }
+
+                    div.hat {
+                        height: auto;
+
+                        margin: 0;
+                        padding: 0;
+
+                        a.name {
+                            border-radius: $radius-1;
+                            color: $white;
+
+                            &:hover, &:focus {
+                                color: $color-hat;
+                                background-color: $white;
+                                text-decoration: none;
+                            }
+                        }
+                    }
                 }
             }
-            .username {
-                color: #484848;
-                font-size: 16px;
-                font-size: 1.6rem;
-                margin-right: 3px;
-            }
-            .date {
-                line-height: 32px;
 
-                .long-date {
-                    display: none;
+            details.message-actions {
+                margin-top: $length-4;
+                margin-right: $length-4;
+                margin-bottom: $length-8;
+
+                summary {
+                    height: $length-32;
+                    padding-right: $length-8;
+                    padding-left: $length-8;
+                    color: $grey-500;
+
+                    &::before {
+                        content: '…';
+
+                        width: $length-6;
+
+                        padding: $length-6;
+
+                        font-size: $font-size-9;
+                        font-weight: bold;
+
+                        line-height: .8;
+                    }
+
+                    &:hover,
+                    &:focus {
+                        color: $grey-700;
+                        outline: none;
+                    }
                 }
-            }
-        }
 
-        .message-actions {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-            position: absolute;
-            top: 0;
-            right: 0;
+                .dropdown-content {
+                    --dropdown-arrow-offset-right: #{$length-12};
+                    padding-top: $length-4;
+                    padding-bottom: $length-4;
 
-            li {
-                float: left;
+                    li {
+                        display: flex;
+                        align-items: center;
+                        box-sizing: border-box;
+
+                        min-width: $length-128;
+
+                        user-select: none;
+
+                        transition: $transition-duration ease-in-out;
+                        transition-property: min-width, width, box-shadow;
+
+                        @include mobile {
+                            width: 0;
+                            min-width: $length-64;
+
+                            span, a:after {
+                                display: none;
+                            }
+                        }
+
+                        form {
+                            margin: 0;
+                            padding: 0;
+
+                            width: 100%;
+                            height: 100%;
+                        }
+
+                        a, button, button[type=submit] {
+                            display: block;
+                            float: none; // to cancel universal button floating
+
+                            box-sizing: border-box;
+
+                            margin: 0;
+                            padding: $length-6;
+                            padding-left: $length-32;
+
+                            width: 100%;
+                            height: 100%;
+
+                            color: $grey-500;
+                            text-decoration: none;
+
+                            // for buttons
+                            text-align: left;
+                            line-height: unset;
+
+                            &:hover, &:focus {
+                                background-color: $blue-000;
+                            }
+
+                            &.ico-after:after {
+                                top: $length-8;
+                                left: $length-8;
+
+                                margin: 0; // for buttons
+                            }
+                        }
+
+                        &.is-separator {
+                            // display: flex in :hover
+                            align-items: center;
+
+                            height: $length-48;
+                            padding: 0 0 0 $length-8;
+
+                            color: $grey-500;
+
+                            span {
+                                display: inline-block;
+
+                                margin-top: -$length-2;
+                                padding: 0 $length-8 0 0;
+                            }
+
+                            hr {
+                                flex: 2;
+
+                                height: $length-1;
+
+                                border: none;
+                                background-color: $grey-200;
+                            }
+                        }
+                    }
+
+                    &, li, a, button {
+                        background-color: $true-white;
+                    }
+
+                    li {
+                        min-width: $length-192;
+
+                        @include mobile {
+                            span {
+                                display: inline;
+                            }
+
+                            a:after {
+                                display: block;
+                            }
+                        }
+
+                        &:first-child {
+                            padding-right: 0;
+
+                            &:after {
+                                display: none;
+                            }
+                        }
+
+                        &:not(:first-child) {
+                            display: block;
+                        }
+
+                        &.is-separator {
+                            display: flex;
+                        }
+
+                        a, button, button[type=submit] {
+                            color: $grey-900;
+                        }
+                    }
+                }
             }
         }
 
         .message-content {
-            clear: both;
-            padding-top: 1px;
 
-            & > div {
-                & > p:first-child {
-                    margin-top: 7px;
-                }
-                & > figure:first-child {
-                    margin-top: 8px;
+            @include desktop {
+
+                margin: 0 $length-14;
+
+                > figure:first-child {
+                    margin-top: $length-10;
                 }
             }
 
-            .message-hidden-content {
-                display: none;
+            > aside > :first-child {
+                margin-top: 0;
+            }
+
+            > aside + .message-text > :first-child {
+                margin-top: 0;
             }
 
             .message-edited,
-            .message-hidden,
             .message-helpful,
             .message-potential-spam,
             .message-repeated {
-                padding-top: 3px 0 0;
+                padding-top: $length-4 0 0;
 
                 &.ico-after {
-                    text-indent: 20px;
+                    text-indent: $length-20;
 
                     &:after {
-                        margin: 4px 0;
+                        margin: $length-2 0;
                     }
                 }
             }
-            .message-edited,
-            .message-hidden,
-            .message-repeated {
-                font-style: italic;
-                color: #999;
 
-                & > a {
-                    color: #999;
+            .message-edited,
+            .message-hidden-reason,
+            .message-repeated {
+                &, & > a {
+                    color: $grey-500;
                 }
 
                 &:after {
                     opacity: .5;
                 }
             }
-            .message-hidden {
-                margin-top: 1px;
+
+            .message-edited,
+            .message-repeated {
+                font-style: italic;
             }
+
+            .message-hidden-reason {
+                margin-top: 0;
+            }
+
+            details.message-hidden-container {
+                margin-bottom: $length-10;
+
+                // These styles are only applied to summaries as they
+                // are used to make this visibly clickable. These should
+                // not be applied to p.message-hidden-reason, displayed to
+                // users without the right to see the hidden message.
+                summary.message-hidden-reason {
+                    cursor: pointer;
+
+                    @include until-desktop {
+                        margin-left: $length-10;
+                    }
+
+                    &:hover, &:active, &:focus {
+                        color: $grey-800;
+                        outline: none;
+                        border: none;
+                    }
+                }
+            }
+
             .message-helpful:not(.message-potential-spam) {
-                color: #48A200;
-                text-indent: 20px;
+                color: $green-800;
+                text-indent: $length-20;
             }
+
             .message-potential-spam {
-                color: hsl(360, 67%, 44%);
-                text-indent: 20px;
+                color: $red-500;
+                text-indent: $length-20;
             }
 
             textarea {
-                margin: 10px 0 10px -1px;
+                margin: $length-10 0 $length-10 -#{$length-1};
                 background-color: transparent;
-                min-height: 150px;
+                min-height: $length-128;
+            }
+
+            .message-hat-choice {
+                display: inline-block;
+                margin: $length-10;
             }
         }
 
         .message-bottom {
             display: flex;
             align-items: flex-start;
-            min-height: 30px;
+
+            min-height: $length-32;
+
+            .metadata-mobile {
+                @include tablet {
+                    display: none;
+                }
+
+                @include mobile {
+                    flex: 1;
+                    align-self: center;
+
+                    margin: 0 0 0 $length-10;
+                    padding: 0;
+
+                    ul {
+                        @include horizontal-list;
+
+                        &, a {
+                            color: $grey-700;
+                            font-size: $font-size-11;
+
+                            &.mobile-permalink {
+                                text-decoration: none;
+                            }
+                        }
+                    }
+
+                    // The user global karma, displayed in the message footer
+                    // on mobile
+                    .user-karma {
+                        font-weight: bold;
+                        text-decoration: none;
+
+                        &.positive {
+                            color: $green-800;
+                        }
+                        &.negative {
+                            color: $red-800;
+                        }
+                    }
+                }
+            }
 
             .signature {
-                border-top: 1px solid #D2D5D6;
-                padding: 3px 0 3px 10px;
-                margin: 0 10px 0 0;
-                font-size: 1.15rem;
-                color: #999;
+                position: relative;
                 flex: 1;
+
+                height: auto;
+                box-sizing: border-box;
+
+                margin: 0 $length-10 0 0;
+                padding: $length-4 0 $length-4 $length-10;
+
+                border-top: $length-1 solid $grey-200;
+
+                font-size: $font-size-11;
+                color: $grey-500;
+                line-height: 1.9;
+
                 overflow: hidden;
+                cursor: pointer;
+
+                @include mobile {
+                    display: none;
+                }
+
+                input[type=checkbox] {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+
+                    opacity: 0;
+                }
 
                 p {
                     margin: 0;
                     padding: 0;
+
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+
                     img.smiley {
-                        max-height: 1.6rem;
+                        max-height: $length-16;
                     }
                 }
 
+                input[type=checkbox]:checked ~ p {
+                    white-space: normal;
+                }
+
                 a {
-                    color: #999;
+                    color: $grey-500;
                     transition: color $transition-duration ease, text-decoration $transition-duration ease;
 
                     &:hover,
                     &:focus {
                         text-decoration: none;
-                        color: #555;
+                        color: $grey-600;
                     }
                 }
             }
 
             .message-karma {
                 margin-left: auto;
-                margin-bottom: -2px;
+                margin-bottom: -$length-4;
 
                 span,
                 button.ico-after {
                     box-sizing: border-box;
-                    border-bottom-width: 3px;
+                    height: $length-32 + $length-4;
+
+                    border-bottom-width: $length-4;
                     border-bottom-color: transparent;
+
                     background: none !important;
-                    height: 32px;
+
+                    line-height: 1.5;
                 }
+
                 span {
                     &.upvote,
                     &.downvote {
@@ -377,8 +751,9 @@ div.msg-are-hidden {
                         }
                     }
                 }
+
                 button {
-                    // Disable transition for text-indent
+                    // Disables transition for text-indent
                     transition-property: opacity, border;
 
                     &.voted:hover {
@@ -391,7 +766,7 @@ div.msg-are-hidden {
                 .upvote,
                 .downvote {
                     &:after {
-                        left: 10px;
+                        left: $length-10;
                     }
                     &.voted:after {
                         opacity: 1;
@@ -413,6 +788,7 @@ div.msg-are-hidden {
                         font-weight: bold;
                     }
                 }
+
                 .upvote {
                     color: $color-success;
 
@@ -420,6 +796,7 @@ div.msg-are-hidden {
                         border-bottom-color: $color-success;
                     }
                 }
+
                 .downvote {
                     color: $color-danger;
 
@@ -435,11 +812,11 @@ div.msg-are-hidden {
 
                     &:hover,
                     &:focus {
-                        color: #555;
+                        color: $grey-600;
                         border-bottom-color: $color-success;
                     }
                     &.active {
-                        color: #48a200;
+                        color: $green-800;
 
                         &:after {
                             opacity: 1;
@@ -450,34 +827,16 @@ div.msg-are-hidden {
                 .alert {
                     &:hover,
                     &:focus {
-                        border-bottom-color: hsl(360, 64%, 55%);
+                        border-bottom-color: $red-500;
                     }
                 }
             }
         }
 
-        .message-buttons {
-            margin: 0 0 0 10px;
-            padding: 0;
-            list-style: none;
-            border-bottom: none;
-
-            a {
-                text-indent: -9999px;
-                width: 0;
-
-                &:after {
-                    left: 12px !important;
-                }
-            }
-        }
-
         .message-submit {
-            margin: 0 10px 5px auto;
+            margin: 0 $length-10 $length-6 auto;
         }
 
-        .message-actions,
-        .message-buttons,
         .message-karma,
         .message-submit {
             display: flex;
@@ -492,15 +851,16 @@ div.msg-are-hidden {
             button {
                 display: block;
                 float: left;
-                margin-left: 3px;
+                margin-left: $length-4;
 
                 &.ico-after {
-                    padding-left: 30px !important;
+                    padding-left: $length-32 !important;
+                    line-height: 2.3;
                 }
 
                 &:after {
-                    top: 7px;
-                    left: 7px;
+                    top: $length-8;
+                    left: $length-8;
                     opacity: .5;
                     margin: 0;
                 }
@@ -510,12 +870,14 @@ div.msg-are-hidden {
             .upvote,
             .downvote,
             button.ico-after {
-                border-bottom: 1px solid #D2D5D6;
+                height: $length-32;
+
+                padding: 0 $length-10;
+
+                border-bottom: $length-1 solid $grey-200;
+
+                color: $grey-500;
                 text-decoration: none;
-                color: #999;
-                height: 29px;
-                line-height: 30px;
-                padding: 0 10px;
 
                 &:empty {
                   padding-right: 0;
@@ -528,9 +890,10 @@ div.msg-are-hidden {
 
                 &:hover,
                 &:focus {
-                    border-bottom-color: lighten($color-primary, 15%);
-                    outline: none;
+                    border-bottom-color: $color-link;
                     background: none;
+                    outline: none;
+
                     transition-property: background, border, outline, opacity;
                     transition-timing-function: ease;
                     transition-duration: $transition-duration;
@@ -543,11 +906,10 @@ div.msg-are-hidden {
         }
 
         .message-actions a,
-        .message-buttons a,
         .message-karma button {
             &:hover,
             &:focus {
-                color: #555;
+                color: $grey-600;
                 text-decoration: none;
             }
         }
@@ -557,216 +919,13 @@ div.msg-are-hidden {
         }
     }
 }
+
 form.topic-message {
-    margin-top: 50px;
-}
-
-@include until-desktop {
-    .topic-message {
-        padding: 20px 0;
-
-        .user {
-            position: absolute;
-            top: 7px;
-            z-index: 10;
-            width: 100%;
-
-            .avatar-link {
-                float: left;
-                display: none;
-            }
-
-            .push-badge {
-                margin-left: 105px;
-            }
-
-            .user-metadata {
-                float: right;
-                width: 140px;
-                margin-right: 10px;
-
-                a {
-                    float: left;
-                    height: 20px;
-                    line-height: 20px;
-                    border-bottom: none;
-                    width: 68px;
-                }
-            }
-        }
-        .message {
-            border-right: 0;
-            border-left: 0;
-            padding-top: 65px;
-
-            .message-metadata {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 10px;
-                z-index: 15;
-                height: 30px;
-                line-height: 30px;
-
-                .username {
-                    margin-left: 5px;
-                }
-
-                .date {
-                    float: right;
-                }
-            }
-
-            .message-actions {
-                margin: 35px 10px 0 0;
-            }
-
-            .message-bottom {
-                min-height: 0;
-
-                .signature {
-                    display: none;
-                }
-                .message-karma {
-                    position: absolute;
-                    top: 35px;
-                    left: 7px;
-
-                    .tick {
-                        text-indent: -9999px;
-                        margin-right: 1px;
-
-                        &:after {
-                            left: 12px;
-                        }
-                    }
-
-                    .upvote,
-                    .downvote {
-                        padding: 0 7px;
-                        text-align: center;
-                    }
-                }
-            }
-        }
-    }
-}
-
-.message-content .message-hat-choice {
-    display: inline-block;
-    margin: 10px;
-}
-
-@include desktop {
-    .topic-message {
-        margin: 25px 0;
-
-        &:first-child {
-            margin-top: 35px;
-        }
-
-        .user,
-        .message {
-            &:after {
-                content: " ";
-                display: block;
-                position: absolute;
-                top: 10px;
-                height: 0;
-                width: 0;
-                border: 20px solid transparent;
-                border-left: 0;
-            }
-        }
-
-        .user {
-            position: absolute;
-            padding-top: 60px;
-            top: 0;
-            left: 0;
-
-            &:after {
-                left: 60px;
-                border-right-color: #D2D4D6;
-            }
-        }
-        .message {
-            margin-left: 80px;
-
-            &:after {
-                top: 9px;
-                left: -19px;
-                border-right-color: #FDFDFD;
-            }
-
-            .is-author {
-                left: 5px;
-            }
-
-            .message-content {
-                margin: 0 10px;
-
-                > :first-child {
-                    margin-top: 5px;
-                }
-                > figure:first-child {
-                    margin-top: 10px;
-                }
-            }
-            .message-bottom .signature {
-                cursor: pointer;
-
-                p {
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    img.smiley {
-                        max-height: 1.6rem;
-                    }
-                }
-                &.full p {
-                    white-space: normal;
-                }
-            }
-        }
-    }
-}
-
-@include mobile {
-    .topic-message .message {
-        .message-actions a {
-            width: 0px;
-            text-indent: -9999px;
-
-            &:after {
-                left: 12px !important;
-            }
-        }
-        .message-submit {
-            display: block !important;
-            width: 100%;
-            margin: 0;
-
-            button {
-                float: right;
-                display: block;
-                width: calc(50% - 2px);
-                margin-left: 1px !important;
-
-                &.btn-grey {
-                    float: left;
-                }
-            }
-        }
-    }
-
-    form .message {
-        padding-top: 0 !important;
-    }
+    margin-top: $length-48;
 }
 
 // For alerts resolution modals
 .cannot-send-message-with-solved-alert {
-    font-size: .9em;
-    line-height: 1.2em;
+    font-size: $font-size-11;
+    line-height: 1.4;
 }

@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.http import Http404, HttpResponse, HttpResponsePermanentRedirect, StreamingHttpResponse
 from django.template.loader import render_to_string
 from django.shortcuts import redirect
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.views.generic import DetailView, FormView
 from django.views.generic import View
 
@@ -55,37 +55,32 @@ class SingleContentViewMixin:
     public_is_prioritary = True
 
     def get_object(self, queryset=None):
-        """ Get database representation of the content by its `pk`, then check permissions
-        """
+        """Get database representation of the content by its `pk`, then check permissions"""
 
         # fetch object:
         try:
-            if 'pk' in self.kwargs:
-                pk = int(self.kwargs['pk'])
-            elif 'pk' in self.request.GET:
-                pk = int(self.request.GET['pk'])
-            elif 'pk' in self.request.POST:
-                pk = int(self.request.POST['pk'])
+            if "pk" in self.kwargs:
+                pk = int(self.kwargs["pk"])
+            elif "pk" in self.request.GET:
+                pk = int(self.request.GET["pk"])
+            elif "pk" in self.request.POST:
+                pk = int(self.request.POST["pk"])
             else:
                 raise Http404("Impossible de trouver le paramètre 'pk'.")
         except ValueError as badvalue:
-            raise Http404("La valeur du paramètre pk '{}' n'est pas un entier valide.".format(badvalue))
+            raise Http404(f"La valeur du paramètre pk '{badvalue}' n'est pas un entier valide.")
 
         queryset = queryset or PublishableContent.objects
 
         if self.prefetch_all:
-            queryset = queryset.\
-                select_related('licence') \
-                .prefetch_related('authors') \
-                .prefetch_related('subcategory') \
-
+            queryset = queryset.select_related("licence").prefetch_related("authors").prefetch_related("subcategory")
         obj = queryset.filter(pk=pk).first()
 
         if not obj:
-            raise Http404('Aucun contenu ne possède cet identifiant.')
+            raise Http404("Aucun contenu ne possède cet identifiant.")
 
         # check permissions:
-        self.is_staff = self.request.user.has_perm('tutorialv2.change_publishablecontent')
+        self.is_staff = self.request.user.has_perm("tutorialv2.change_publishablecontent")
         self.is_author = self.request.user in obj.authors.all()
 
         if self.must_be_author and not self.is_author:
@@ -95,8 +90,7 @@ class SingleContentViewMixin:
         return obj
 
     def get_versioned_object(self):
-        """Gets the asked version of current content.
-        """
+        """Gets the asked version of current content."""
 
         # fetch version:
         sha = self.object.sha_draft
@@ -105,10 +99,10 @@ class SingleContentViewMixin:
             if self.sha:
                 sha = self.sha
             else:
-                if 'version' in self.request.GET:
-                    sha = self.request.GET['version']
-                elif 'version' in self.request.POST:
-                    sha = self.request.POST['version']
+                if "version" in self.request.GET:
+                    sha = self.request.GET["version"]
+                elif "version" in self.request.POST:
+                    sha = self.request.POST["version"]
 
         self.sha = sha
 
@@ -124,8 +118,8 @@ class SingleContentViewMixin:
         versioned = self.object.load_version_or_404(self.sha)
 
         # check slug, if any:
-        if 'slug' in self.kwargs:
-            slug = self.kwargs['slug']
+        if "slug" in self.kwargs:
+            slug = self.kwargs["slug"]
             if versioned.slug != slug:
                 if slug != self.object.slug:  # retro-compatibility, but should raise permanent redirect instead
                     raise Http404("Ce slug n'existe pas pour ce contenu.")
@@ -133,8 +127,7 @@ class SingleContentViewMixin:
         return versioned
 
     def get_public_object(self):
-        """Get the published version, if any
-        """
+        """Get the published version, if any"""
 
         object = PublishedContent.objects.filter(content_pk=self.object.pk, must_redirect=False).last()
         if object:
@@ -151,10 +144,10 @@ class SingleContentPostMixin(SingleContentViewMixin):
     versioned = True
 
     def get_object(self, queryset=None):
-        self.object = super(SingleContentPostMixin, self).get_object()
+        self.object = super().get_object()
 
-        if self.versioned and 'version' in self.request.POST['version']:
-            self.object.load_version_or_404(sha=self.request.POST['version'])
+        if self.versioned and "version" in self.request.POST["version"]:
+            self.object.load_version_or_404(sha=self.request.POST["version"])
         return self.object
 
 
@@ -171,7 +164,7 @@ class ModalFormView(FormView):
         The redirection is made to `form.previous_page_url`, if exists, `content:view` otherwise."""
 
         if not self.modal_form:
-            return super(ModalFormView, self).form_invalid(form)
+            return super().form_invalid(form)
         else:
             errors = form.errors.as_data()
             if len(errors) > 0:
@@ -179,23 +172,22 @@ class ModalFormView(FormView):
                 error_message = list(errors.values())[0][0].messages[0]
                 messages.error(self.request, error_message)
             else:
-                messages.error(
-                    self.request, _('Une erreur inconnue est survenue durant le traitement des données.'))
+                messages.error(self.request, _("Une erreur inconnue est survenue durant le traitement des données."))
 
-            if hasattr(form, 'previous_page_url'):
+            if hasattr(form, "previous_page_url"):
                 return redirect(form.previous_page_url)
             else:
-                return redirect(reverse('content:view'))  # assume a default url
+                return redirect(reverse("content:view"))  # assume a default url
 
 
 class FormWithPreview(FormView):
     def post(self, request, *args, **kwargs):
         form = self.form_class(request.POST)
 
-        if 'preview' in request.POST:
+        if "preview" in request.POST:
             self.form_invalid(form)
             if request.is_ajax():
-                content = render_to_string('misc/preview.part.html', {'text': request.POST.get('text')})
+                content = render_to_string("misc/preview.part.html", {"text": request.POST.get("text")})
                 return StreamingHttpResponse(content)
 
         return super().post(request, *args, **kwargs)
@@ -218,12 +210,12 @@ class SingleContentFormViewMixin(SingleContentViewMixin, ModalFormView):
         if self.object.sha_public:
             self.public_content_object = self.get_public_object()
 
-        return super(SingleContentFormViewMixin, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        context = super(SingleContentFormViewMixin, self).get_context_data(**kwargs)
-        context['content'] = self.versioned_object
-        context['is_staff'] = self.is_staff
+        context = super().get_context_data(**kwargs)
+        context["content"] = self.versioned_object
+        context["is_staff"] = self.is_staff
         return context
 
 
@@ -247,7 +239,7 @@ class SingleContentDetailViewMixin(SingleContentViewMixin, DetailView):
 
         if not self.sha:
             try:
-                self.sha = request.GET['version']
+                self.sha = request.GET["version"]
             except KeyError:
                 self.sha = self.object.sha_draft
 
@@ -259,26 +251,26 @@ class SingleContentDetailViewMixin(SingleContentViewMixin, DetailView):
         return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):
-        context = super(SingleContentDetailViewMixin, self).get_context_data(**kwargs)
-        context['helps'] = list(HelpWriting.objects.all())
-        context['content_helps'] = list(self.object.helps.all())
-        context['content'] = self.versioned_object
-        context['can_edit'] = self.is_author
-        context['is_staff'] = self.is_staff
-        if self.object.type == 'OPINION':
-            context['can_publish'] = not self.object.is_permanently_unpublished()
+        context = super().get_context_data(**kwargs)
+        context["helps"] = list(HelpWriting.objects.all())
+        context["content_helps"] = list(self.object.helps.all())
+        context["content"] = self.versioned_object
+        context["can_edit"] = self.is_author
+        context["is_staff"] = self.is_staff
+        if self.object.type == "OPINION":
+            context["can_publish"] = not self.object.is_permanently_unpublished()
         if self.sha != self.object.sha_draft:
-            context['version'] = self.sha
+            context["version"] = self.sha
 
-        is_allowed = (self.is_author or self.is_staff)
-        is_same_version = (not self.sha or self.sha == self.object.sha_draft)
-        context['can_add_something'] = is_allowed and is_same_version
+        is_allowed = self.is_author or self.is_staff
+        is_same_version = not self.sha or self.sha == self.object.sha_draft
+        context["can_add_something"] = is_allowed and is_same_version
 
         if self.object.beta_topic:
             beta_topic = Topic.objects.get(pk=self.object.beta_topic.pk)
 
             if beta_topic:
-                context['beta_topic'] = beta_topic
+                context["beta_topic"] = beta_topic
 
         return context
 
@@ -289,26 +281,26 @@ class ContentTypeMixin:
     current_content_type = None
 
     def get_context_data(self, **kwargs):
-        context = super(ContentTypeMixin, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
-        v_type_name = _('contenu')
-        v_type_name_plural = _('contenus')
+        v_type_name = _("contenu")
+        v_type_name_plural = _("contenus")
 
-        if self.current_content_type == 'ARTICLE':
-            v_type_name = _('article')
-            v_type_name_plural = _('articles')
+        if self.current_content_type == "ARTICLE":
+            v_type_name = _("article")
+            v_type_name_plural = _("articles")
 
-        if self.current_content_type == 'TUTORIAL':
-            v_type_name = _('tutoriel')
-            v_type_name_plural = _('tutoriels')
+        if self.current_content_type == "TUTORIAL":
+            v_type_name = _("tutoriel")
+            v_type_name_plural = _("tutoriels")
 
-        if self.current_content_type == 'OPINION':
-            v_type_name = _('billet')
-            v_type_name_plural = _('billets')
+        if self.current_content_type == "OPINION":
+            v_type_name = _("billet")
+            v_type_name_plural = _("billets")
 
-        context['current_content_type'] = self.current_content_type
-        context['verbose_type_name'] = v_type_name
-        context['verbose_type_name_plural'] = v_type_name_plural
+        context["current_content_type"] = self.current_content_type
+        context["verbose_type_name"] = v_type_name
+        context["verbose_type_name_plural"] = v_type_name_plural
 
         return context
 
@@ -324,7 +316,7 @@ class MustRedirect(Exception):
         :param args: exception *args
         :param kwargs: exception **kwargs
         """
-        super(MustRedirect, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.url = url
 
 
@@ -362,35 +354,36 @@ class SingleOnlineContentViewMixin(ContentTypeMixin):
 
     def get_public_object(self):
         try:
-            if 'pk' in self.kwargs:
-                pk = int(self.kwargs['pk'])
-            elif 'pk' in self.request.GET:
-                pk = int(self.request.GET['pk'])
-            elif 'pk' in self.request.POST:
-                pk = int(self.request.POST['pk'])
+            if "pk" in self.kwargs:
+                pk = int(self.kwargs["pk"])
+            elif "pk" in self.request.GET:
+                pk = int(self.request.GET["pk"])
+            elif "pk" in self.request.POST:
+                pk = int(self.request.POST["pk"])
             else:
                 raise Http404("Impossible de trouver le paramètre 'pk'.")
         except ValueError as badvalue:
-            raise Http404("La valeur du paramètre pk '{}' n'est pas un entier valide.".format(badvalue))
-        queryset = PublishedContent.objects\
-            .filter(content_pk=pk)\
-            .prefetch_related('content')\
-            .prefetch_related('content__authors')\
-            .prefetch_related('content__subcategory')\
-            .prefetch_related('content__tags')\
-            .prefetch_related('content__public_version')\
-            .select_related('content__last_note')
+            raise Http404(f"La valeur du paramètre pk '{badvalue}' n'est pas un entier valide.")
+        queryset = (
+            PublishedContent.objects.filter(content_pk=pk)
+            .prefetch_related("content")
+            .prefetch_related("content__authors")
+            .prefetch_related("content__subcategory")
+            .prefetch_related("content__tags")
+            .prefetch_related("content__public_version")
+            .select_related("content__last_note")
+        )
 
         if self.current_content_type:
             queryset = queryset.filter(content_type=self.current_content_type)
 
-        if 'slug' in self.kwargs:
-            queryset = queryset.filter(content_public_slug=self.kwargs['slug'])
+        if "slug" in self.kwargs:
+            queryset = queryset.filter(content_public_slug=self.kwargs["slug"])
 
-        obj = queryset.order_by('publication_date').last()  # 'last' version must be the most recent to be published
+        obj = queryset.order_by("publication_date").last()  # 'last' version must be the most recent to be published
 
         if obj is None:
-            raise Http404('Aucun contenu ne possède ce slug.')
+            raise Http404("Aucun contenu ne possède ce slug.")
 
         # Redirection ?
         if obj.must_redirect:
@@ -402,7 +395,7 @@ class SingleOnlineContentViewMixin(ContentTypeMixin):
                 raise Http404("La redirection est activée mais le contenu n'est pas public.")
 
         self.is_author = self.request.user in obj.authors.all()
-        self.is_staff = self.request.user.has_perm('tutorialv2.change_publishablecontent')
+        self.is_staff = self.request.user.has_perm("tutorialv2.change_publishablecontent")
 
         self.current_content_type = obj.content_type
         if obj and obj.content.last_note:
@@ -449,9 +442,7 @@ class SingleOnlineContentDetailViewMixin(SingleOnlineContentViewMixin, DetailVie
         self.object = self.get_object()
         self.versioned_object = self.get_versioned_object()
         context = self.get_context_data(object=self.object)
-        follow = ContentRead.objects.filter(user__pk=self.request.user.pk)\
-            .filter(content__pk=self.object.pk)\
-            .first()
+        follow = ContentRead.objects.filter(user__pk=self.request.user.pk).filter(content__pk=self.object.pk).first()
         if follow is not None:
             follow.note = self.object.last_note
             follow.save()
@@ -460,16 +451,16 @@ class SingleOnlineContentDetailViewMixin(SingleOnlineContentViewMixin, DetailVie
 
     def get_context_data(self, **kwargs):
 
-        context = super(SingleOnlineContentDetailViewMixin, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
-        context['content'] = self.versioned_object
-        context['is_obsolete'] = self.object.is_obsolete
-        context['public_object'] = self.public_content_object
-        context['can_edit'] = self.request.user in self.object.authors.all()
-        context['is_antispam'] = self.object.antispam(self.request.user)
-        context['is_staff'] = self.is_staff
-        context['is_author'] = self.is_author
-        context['db_content'] = self.object
+        context["content"] = self.versioned_object
+        context["is_obsolete"] = self.object.is_obsolete
+        context["public_object"] = self.public_content_object
+        context["can_edit"] = self.request.user in self.object.authors.all()
+        context["is_antispam"] = self.object.antispam(self.request.user)
+        context["is_staff"] = self.is_staff
+        context["is_author"] = self.is_author
+        context["db_content"] = self.object
         return context
 
 
@@ -499,13 +490,13 @@ class SingleOnlineContentFormViewMixin(SingleOnlineContentViewMixin, ModalFormVi
         if self.denied_if_lock and self.object.is_locked:
             raise PermissionDenied
 
-        return super(SingleOnlineContentFormViewMixin, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        context = super(SingleOnlineContentFormViewMixin, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
-        context['content'] = self.versioned_object
-        context['public_object'] = self.public_content_object
+        context["content"] = self.versioned_object
+        context["public_object"] = self.public_content_object
 
         return context
 
@@ -518,6 +509,7 @@ class DownloadViewMixin(View):
 
     You just need to override `get_contents()` to make it works
     """
+
     mimetype = None
     filename = None
 
@@ -536,7 +528,7 @@ class DownloadViewMixin(View):
         Properly sets Content-Type and Content-Disposition headers
         """
         response = HttpResponse(content_type=self.get_mimetype())
-        response['Content-Disposition'] = 'filename=' + self.get_filename()
+        response["Content-Disposition"] = "filename=" + self.get_filename()
         response.write(self.get_contents())
 
         return response
@@ -555,13 +547,13 @@ class SingleContentDownloadViewMixin(SingleContentViewMixin, DownloadViewMixin):
 
         if not self.sha:
             try:
-                self.sha = self.request.GET['version']
+                self.sha = self.request.GET["version"]
             except KeyError:
                 self.sha = self.object.sha_draft
 
         self.versioned_object = self.get_versioned_object()
 
-        return super(SingleContentDownloadViewMixin, self).get(context, **response_kwargs)
+        return super().get(context, **response_kwargs)
 
 
 class RequiresValidationViewMixin(SingleContentDetailViewMixin):
@@ -572,7 +564,7 @@ class RequiresValidationViewMixin(SingleContentDetailViewMixin):
     def get(self, request, *args, **kwargs):
         if not self.get_object().requires_validation():
             raise PermissionDenied
-        return super(RequiresValidationViewMixin, self).get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
 
 class DoesNotRequireValidationFormViewMixin(SingleContentFormViewMixin):
@@ -583,4 +575,4 @@ class DoesNotRequireValidationFormViewMixin(SingleContentFormViewMixin):
     def get_form_kwargs(self):
         if self.versioned_object.requires_validation():
             raise PermissionDenied
-        return super(DoesNotRequireValidationFormViewMixin, self).get_form_kwargs()
+        return super().get_form_kwargs()

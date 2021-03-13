@@ -128,6 +128,75 @@ Il est possible de créer des modales en Javascript. Exemple:
   Modal.current; // Contient la modale courante (utile pour savoir si une modale est ouverte)
   Modal.closeCurrent(); // Ferme la modale courante
 
+Les infobulles CSS
+==================
+
+À ne pas confondre avec `les infobulles en JavaScript <helpers-js.html#tooltip>`_, les infobulles CSS ont la même apparence
+mais sont beaucoup plus légères et simples à utiliser. Par contre, elles ne peuvent contenir de contenu HTML riche, ni ne
+réagir au clic. Elles sont donc efficaces pour des infobulles purement informatives, mais qui sont suffisamment importantes
+pour être affichées directement au survol, et non en attendant une seconde ou deux (comme un attribut ``title``).
+
+Pour ajouter une infobulle CSS sur un élément, ajoutez simplement la classe ``has-tooltip`` à l'élément, assortie de l'attribut
+``aria-describedby`` contenant le texte de l'infobulle.
+
+Par exemple :
+
+.. sourcecode:: html
+
+   <span class="has-tooltip is-tooltip-bottom" aria-describedby="Jeudi 31 décembre 2020 à 14h02">
+       Modifié par staff
+   </span>
+
+donnera, au survol :
+
+.. figure:: ../images/design/infobulle-css.png
+   :align: center
+
+   Une belle infobulle
+
+.. note::
+
+   S'il ne fait pas sens d'utiliser l'attribut ``aria-describedby`` dans le contexte de l'infobulle, il est également
+   possible d'utiliser :
+
+   - ``aria-label``, si tout l'élément est décrit par l'infobulle, et que l'élément lui-même ne contient pas de texte
+     (par exemple pour une icône) ;
+   - ``data-tooltip``, si rien d'autre ne convient. Attention : le texte de l'infobulle ne sera alors pas accessible.
+     Vous ne devriez jamais avoir à utiliser cela.
+
+L'infobulle sera affichée au survol. Si besoin, elle peut également être affichée programmatiquement en ajoutant la classe
+CSS ``is-tooltip-active`` à l'élément.
+
+Il est possible de contrôler la position de l'infobulle à l'aide des classes ``is-tooltip-right``, ``is-tooltip-left`` et
+``is-tooltip-bottom``. Par défaut, l'infobulle est affichée au dessus de l'élément.
+
+S'il vous faut afficher un texte un peu long sur l'infobulle, qui ne rentre pas en une seule ligne, ajoutez la classe
+``is-tooltip-multiline``.
+
+.. note::
+
+   Ce module est une reprise adaptée de ``bulma-tooltip`` `de Wikiki <https://wikiki.github.io/elements/tooltip/>`_.
+
+Les menus déroulants (ou dropdown)
+==================================
+
+À ne pas confondre avec ``header-dropdown``, ces menus déroulants ne requièrent aucun JS pour fonctionner mais se reposent sur la balise ``<details>``.
+
+Pour créer un menu déroulant, utilisez simplement la classe ``dropdown`` à l'élément ``<details>``, en utilisant la balise ``<summary>`` pour fournir un texte alternatif au ``…`` affiché par défaut.
+
+La classe ``.dropdown-content`` permet de grouper le contenu pour le positionner.
+
+Par exemple :
+
+.. sourcecode:: html
+
+   <details class="dropdown">
+      <summary><span class="sr-only">Menu déroulant</span></summary>
+
+      <div class="dropdown-content"></div>
+   </details>
+
+Note : Il y a par défaut un léger décalage vers la gauche via la variable ``$dropdown-offset-right``.
 
 La lecture zen
 ==============
@@ -154,10 +223,11 @@ Pour avoir la lecture zen, il suffit d'inclure le bouton "Lecture zen" là où v
 
 Au clic du bouton, le Javascript se chargera de mettre ou d'enlever la classe ``zen-mode`` à ``.content-container``.
 
-Les *items* représentant les contenus et les derniers sujets
-============================================================
+Les boîtes représentant les contenus et les derniers sujets
+===========================================================
 
-Les contenus (articles et tutoriels) ainsi que les derniers sujets de la page d'accueil sont représentés dans des *items*.
+Les contenus (articles et tutoriels) ainsi que les derniers sujets de la page d'accueil sont représentés dans des boîtes
+les résumant.
 
 .. figure:: ../images/design/item-contenu.png
    :align: center
@@ -234,8 +304,8 @@ Sujet
 
 Vous devez passer en argument ``topic`` qui est un objet de type ``Topic``.
 
-Faire une liste d'*items*
--------------------------
+Faire une liste de contenus
+---------------------------
 
 Si vous voulez faire une liste de tutoriels, il faut les regrouper dans une ``<div class="content-item-list"></div>``.
 
@@ -278,6 +348,160 @@ Pour y remédier, il faut toujours mettre à la fin de votre liste d'articles tr
 
 (Pour l'explication technique, c'est dû à l'utilisation de *flexbox*.)
 
+Si vous voulez mettre plusieurs listes de contenus, avec des titres, vous pouvez grouper chaque titre + liste dans une
+``section.content-item-list-wrapper``, afin de gérer correctement l'espacement entre les blocs.
+
+.. sourcecode:: html+django
+
+   <section class="content-item-list-wrapper" itemscope="" itemtype="http://schema.org/ItemList">
+       <h2><span>{% trans "Les contenus" %}</span></h2>
+       <div class="content-item-list">
+           <!-- Mes contenus -->
+       </div>
+   </section>
+
+Les membres et listes de membres
+================================
+
+Afficher un membre
+------------------
+
+Pour afficher un membre, utilisez le gabari ``misc/member_item.part.html``. Il dispose de plusieurs arguments :
+
+  - ``member`` : le membre à afficher (ce peut être un ``Profile`` ou un ``User``, peu importe) ;
+  - ``inline`` : si ``True``, l'élément sera stylisé pour une intégration au cœur d'un texte ;
+  - ``link`` : si ``True``, l'élément se comportera comme un simple lien au survol (et non une sorte de bouton, avec un
+    fond au survol) ;
+  - ``avatar`` : si ``True``, l'avatar du membre sera affiché ;
+  - ``info`` : si renseigné, le texte donné sera affiché après le pseudonyme du membre, afin de donner un détail sur ce
+    dernier (ce texte sera entre parenthèses, sauf si le mode “pleine largeur” est actif — voir plus bas) ;
+  - ``fullwidth`` : si ``True``, active le support du mode pleine largeur (ce qui concrètement écrit le texte de
+    ``info`` sans parenthèses).
+
+Ce qui peut donner ceci par exemple.
+
+.. sourcecode:: html+django
+
+   {% include "misc/member_item.part.html" with member=member avatar=True %}
+
+.. figure:: ../images/design/item-member.png
+   :align: center
+
+.. sourcecode:: html+django
+
+   {% include "misc/member_item.part.html" with member=member avatar=True info="Écriture" %}
+
+.. figure:: ../images/design/item-member-info.png
+   :align: center
+
+.. sourcecode:: html+django
+
+   <time datetime="{{ alert.pubdate | date:"c" }}">{{ alert.pubdate|format_date|capfirst }}</time>
+   {% trans "par" %} {% include "misc/member_item.part.html" with member=alert.author inline=True link=True %}
+
+.. figure:: ../images/design/item-member-link.png
+   :align: center
+
+Afficher une liste de membres
+-----------------------------
+
+Il arrive souvent que l'on ait à afficher non un seul membre, mais une liste de membres (par exemple une liste
+d'auteurs, ou de contributeurs, ou n'importe quoi en fait).
+
+La manière la plus simple de le faire est d'englober les éléments ``misc/member_item.part.html`` précédents dans un bloc
+avec la classe ``members``, ce dernier contenant une liste qui elle contient les différents éléments à afficher.
+
+.. sourcecode:: html+django
+
+   <div class="members">
+       <ul>
+           {% for member in members %}
+               <li>
+                   {% include "misc/member_item.part.html" with member=member avatar=True %}
+               </li>
+           {% endfor %}
+       </ul>
+   </div>
+
+.. figure:: ../images/design/item-member-list.png
+   :align: center
+
+On peut ajouter un élément légendant l'ensemble, ainsi qu'un bouton à la suite, si besoin.
+
+.. sourcecode:: html+django
+
+   <div class="members">
+       <span class="authors-label">
+           {% trans "Auteurs" %}
+       </span>
+       <ul>
+           {% for member in members %}
+               <li>
+                   {% include "misc/member_item.part.html" with member=member avatar=True author=True %}
+               </li>
+           {% endfor %}
+
+           <li>
+               <a href="#add-author-content" class="btn btn-add ico-after more blue">
+                   Ajouter un auteur
+               </a>
+           </li>
+       </ul>
+   </div>
+
+.. figure:: ../images/design/item-member-list-label-button.png
+   :align: center
+
+Enfin, il est possible d'exploiter cette liste comme une liste en pleine largeur, ce qui peut très bien rendre avec un
+texte d'information ajouté. Pour ce faire, il faut ajouter la classe ``is-fullwidth`` à l'élément parent ``.authors``.
+On pourra également ajouter l'argument ``fullwidth=True`` à ``misc/member_item.part.html`` afin d'optimiser l'affichage
+pour ce cas d'usage (retirant les parenthèses autour du bloc info).
+
+.. sourcecode:: html+django
+
+   <div class="members is-fullwidth">
+       <ul>
+           {% for member in members %}
+               <li>
+                   {% include "misc/member_item.part.html" with member=member avatar=True fullwidth=True %}
+               </li>
+           {% endfor %}
+       </ul>
+   </div>
+
+.. figure:: ../images/design/item-member-list-fullwidth.png
+   :align: center
+
+
+Les alertes de modération
+=========================
+
+Pour afficher une liste d'alertes de modération, utilisez le gabari ``misc/alerts.part.html``. Il demande le paramètre
+``alerts``, qui doit être un itérable d'``Alert`` à afficher, ainsi que l'un ou l'autre de ces paramètres pour préciser
+vers quoi le formulaire de résolution d'alerte doit être envoyé :
+
+- ``alert_solve_url`` : un **nom** d'URL (qui doit accepter un unique paramètre ``pk`` qui sera celui de l'alerte à
+  résoudre et qui doit être appelable en ``POST``) ; ou
+- ``alert_solve_link`` : une URL qui sera utilisée telle quelle pour toutes les alertes, et qui doit être appelable en
+  ``POST`` également.
+
+Si aucun de ces paramètres n'est renseigné, le formulaire sera envoyé en ``POST`` vers la page courante.
+
+Le formulaire transmettra les champs suivants :
+
+- ``alert_pk`` : le ``pk`` de l'alerte à résoudre ;
+- ``text`` : le message à envoyer au membre ayant ouvert l'alerte (peut être vide, et sera toujours vide si l'alerte
+  a été ouverte automatiquement).
+
+.. sourcecode:: html+django
+
+   <h2>{% trans "Signalements du profil" %}</h2>
+   {% include "misc/alerts.part.html" with alerts=alerts alert_solve_url='solve-profile-alert' %}
+
+.. figure:: ../images/design/alerts.png
+   :align: center
+
+
 Ajouter un design temporaire
 ============================
 
@@ -308,10 +532,11 @@ Les changements visuels disponibles sont:
 
   - ``snow``: ajoute de la neige dans le header
   - ``clem-christmas``: ajoute un bonnet à la Clem de la page d'accueil
+  - ``clem-halloween``: remplace la Clem de la page d'accueil par une Clem qui fait peur
+  - ``valentine-snow``: ajoute des cœurs dans le header à la place de la neige
 
 Par exemple, pour activer les changements ``snow`` et ``clem-christmas``, il faut ajouter au ``settings_prod.py``:
 
 .. sourcecode:: python
 
     ZDS_APP['visual_changes'] = ['snow', 'clem-christmas']
-
